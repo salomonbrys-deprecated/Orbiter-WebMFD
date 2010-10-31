@@ -49,11 +49,15 @@ function addMFD(div)
 function removeMFD(key)
 {
 	$(key).cont.style.width = ($($(key).cont).getWidth() - 435) + 'px';
-	$(key).socket.send("99");
-	$(key).socket.key = false;
-	delete $(key).socket;
+	var socket = $(key).socket;
 	$(key).remove();
 	removeEmptyMFDsDiv();
+	if (socket)
+	{
+		socket.send("99");
+		socket.key = false;
+		delete socket;
+	}
 }
 
 function bodyOnLoad()
@@ -126,6 +130,12 @@ function processButton(key, id)
 function createSocket(key)
 {
 	var socket = new WebSocket('ws://' + document.location.host + '/btn/?key=' + key);
+	if (!socket)
+	{
+		createSocket(key);
+		return ;
+	}
+	
 	socket.key = key;
 	$(key).socket = socket;
 	socket.onopen = function ()
