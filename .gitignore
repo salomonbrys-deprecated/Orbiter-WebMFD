@@ -1,0 +1,8 @@
+Debug
+Release
+*.aps
+*.sdf
+*.suo
+*.opensdf
+*.filters
+*.vcxproj.user

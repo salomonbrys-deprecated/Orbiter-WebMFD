@@ -1,0 +1,151 @@
+
+*
+{
+	padding: 0;
+	margin: 0;
+}
+
+img
+{
+	border: none;
+}
+
+ul li
+{
+	margin-left: 20px;
+}
+
+body
+{
+	background: #001;
+	color: #eef;
+	font-family: Sans-Serif;
+}
+
+div#topBar button#add
+{
+	width: 40px;
+	height: 40px;
+	border: solid #ccd 1px;
+	-webkit-border-radius: 12px;
+	-moz-border-radius: 12px;
+	background: #112;
+	color: #eef;
+	font-size: 25px;
+	margin: 5px;
+}
+
+div.MFDs
+{
+	height: 330px;
+	width: 84px;
+}
+
+div.MFD
+{
+	width: 345px;
+	height: 280px;
+	background: #112;
+	border: solid #446 1px;
+	-webkit-border-radius: 42px;
+	-moz-border-radius: 42px;
+	margin: 42px 0 0 84px;
+	float: left;
+	padding: 2px;
+}
+
+div.MFD div.LBtn, div.MFD div.RBtn
+{
+	float: left;
+	padding-top: 12px;
+}
+
+div.MFD div.LBtn button, div.MFD div.RBtn button, div.MFD div.DBtn button
+{
+	display: block;
+	width: 45px;
+	margin-top: 14px;
+	height: 25px;
+	font-family: "Courier New";
+	font-size: 15px;
+	background: #001;
+	color: #dde;
+	border: solid #668 1px;
+}
+
+div.MFD div.LBtn button
+{
+	text-align: right;
+	padding-right: 5px;
+	border-right: none;
+	-webkit-border-radius: 8px 0 0 8px;
+	-moz-border-radius: 8px 0 0 8px;
+}
+
+div.MFD div.RBtn button
+{
+	text-align: left;
+	padding-left: 5px;
+	border-left: none;
+	-webkit-border-radius: 0 8px 8px 0;
+	-moz-border-radius: 0 8px 8px 0;
+}
+
+div.MFD div.DBtn
+{
+	clear: both;
+}
+
+div.MFD div.DBtn button
+{
+	margin-top: 0px;
+}
+
+div.MFD div.DBtn button
+{
+	border-top: 0px;
+	-webkit-border-radius: 0  0 8px 8px;
+	-moz-border-radius: 0  0 8px 8px;
+}
+
+div.MFD div.DBtn button.MNU
+{
+	float: right;
+	margin-right: 55px;
+}
+
+div.MFD div.DBtn button.SEL
+{
+	float: right;
+	margin-right: 8px;
+}
+
+div.MFD div.DBtn button.PWR
+{
+	float: left;
+	margin-left: 55px;
+	color: #c22;
+}
+
+div.MFD img
+{
+	width: 255px;
+	height: 255px;
+	float: left;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+}
+
+div.MFD.add button
+{
+	display: block;
+	font-family: "Courier New";
+	font-size: 32px;
+	background: #001;
+	color: #dde;
+	border: solid #223 2px;
+	-webkit-border-radius: 50px;
+	-moz-border-radius: 50px;
+	margin: 50px auto;
+	padding: 70px 90px;
+}
