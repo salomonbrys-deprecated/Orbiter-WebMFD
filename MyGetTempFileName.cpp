@@ -1,12 +1,16 @@
-// This code is inspired by the MSDN
-// http://msdn.microsoft.com/en-us/library/aa363875(v=VS.85).aspx
-// The filePath parameter must be able to receive MAX_PATH characters
+/// \file
+/// This file is inspired from http://msdn.microsoft.com/en-us/library/aa363875(v=VS.85).aspx
+/// by Microsoft (c)
 
 #include <windows.h>
 #include <tchar.h>
 #include <stdio.h>
 #include <string>
 
+/// Gets a temporary file absolute path.
+/// \param[in]	prefix		The prefix of the temporary file name to create.
+/// \param[out]	filePath	The memory on which the path will be written, must be able to receive MAX_PATH characters.
+/// \return Wether the temporary file creation has succeeded or not.
 BOOL MyGetTempFileName(const char *prefix, char *filePath)
 {
 	TCHAR lpTempPathBuffer[MAX_PATH];
@@ -18,5 +22,5 @@ BOOL MyGetTempFileName(const char *prefix, char *filePath)
 	if (uRetVal == 0)
 		return NULL;
 
-	return true;
+	return TRUE;
 }

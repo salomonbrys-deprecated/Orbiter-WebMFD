@@ -1,31 +1,15 @@
+/// \file
+/// This file is inspired from http://www.ibm.com/developerworks/aix/library/au-endianc/index.html?ca=drs-
+/// by Harsha S. Adiga
 
 #include <Windows.h>
 
-//inline bool isLittleEndian()
-//{
-//	int i = 1;
-//	char *p = (char *)&i;
-//
-//	if (p[0] == 1)
-//		return true;
-//	else
-//		return false;
-//}
-//
-//inline void endian_swap(INT32& x)
-//{
-//    x = (x>>24) | 
-//        ((x<<8) & 0x00FF0000) |
-//        ((x>>8) & 0x0000FF00) |
-//        (x<<24);
-//}
-
-// The following code is inspired from
-// http://www.ibm.com/developerworks/aix/library/au-endianc/index.html?ca=drs-
-
 static const int i = 1;
+
+/// Returns 1 if the running machine is big endian and 0 if not
 #define is_bigendian() ( (*(char*)&i) == 0 )
 
+/// Returns the big endian version of the given int, regardless of the running architecture.
 INT32 getBigEndian(INT32 i)
 {
 	unsigned char c1, c2, c3, c4;
