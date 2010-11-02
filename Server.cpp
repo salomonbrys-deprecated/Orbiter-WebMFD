@@ -75,7 +75,7 @@ bool Server::stop()
 	WaitForSingleObject(_mfdsMutex, INFINITE);
 
 	// Unregister all registered MFDs
-	while (MFDMap::iterator i = _mfds.begin(); i != _mfds.end(); ++i)
+	for (MFDMap::iterator i = _mfds.begin(); i != _mfds.end(); ++i)
 		i->second->unRegister();
 
 	// Clear the map
@@ -178,7 +178,7 @@ void Server::clbkOrbiter()
 		_toRegister.front()->Register();
 
 	// Call the Orbiter MFD unRegister for each unregister event registered MFD.
-	for (; !_toUnregister.empty(); _toUnregister.pop();)
+	for (; !_toUnregister.empty(); _toUnregister.pop())
 		_toUnregister.front()->unRegister();
 
 	// Call the Orbiter MFD endBtnProcess for each button pressed event registered MFD.

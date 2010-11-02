@@ -1,14 +1,8 @@
-// ==============================================================
-//                  ORBITER MODULE: WebMFD
-//            Copyright (C) 2010 Salomon BRYS
-//                   All rights reserved
-//
-// ServerMFD.
-//
-// Class implementation for ServerMFD. Handles the MFDs displayed by
-// the webserver.
-// This code is inspired by ExtMFD module by Martin Schweiger
-// ==============================================================
+/// \file
+/// \author Salomon BRYS <salomon.brys@gmail.com>
+/// Copyright (C) 2006 Martin Schweiger
+/// Copyright (C) 2010 File authors
+/// License LGPL
 
 #include "Server.h"
 #include "ServerMFD.h"
@@ -17,16 +11,13 @@
 #include <gdiplus.h>
 #include <limits.h>
 
-// ==============================================================
-// prototype definitions
-
 BOOL MyGetTempFileName(const char *prefix, char *filePath);
 
-// ==============================================================
-// ServerMFD class implementation
 
 ServerMFD::ServerMFD() :
+	// Initializes the specs and the ExternMFD with those specs
 	_spec(0, 0, 255, 255, 6, 6, 255 / 7, (255 * 2) / 13), ExternMFD(_spec),
+	// Default values for all properties
 	_png(0), _jpeg(0), _nox(0), _btnProcess(false), _fileId(1), _btnClose(false)
 {
 	Resize(_spec);
@@ -43,6 +34,7 @@ ServerMFD::ServerMFD() :
 	_fileMutex = CreateMutex(NULL, FALSE, NULL);
 }
 
+
 ServerMFD::~ServerMFD(void)
 {
 	DeleteFile((_tempFileName + ".png").c_str());
@@ -50,6 +42,7 @@ ServerMFD::~ServerMFD(void)
 
 	CloseHandle(_btnMutex);
 }
+
 
 void ServerMFD::clbkRefreshDisplay(SURFHANDLE hSurf)
 {
@@ -77,6 +70,7 @@ void ServerMFD::clbkRefreshDisplay(SURFHANDLE hSurf)
 
 	oapiReleaseDC(hSurf, hDCsrc);
 }
+
 
 HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 {
@@ -117,11 +111,13 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 	return ret;
 }
 
+
 void ServerMFD::closeFile(HANDLE file)
 {
 	CloseHandle(file);
 	ReleaseMutex(_fileMutex);
 }
+
 
 void	ServerMFD::waitForBtnProcess()
 {
@@ -139,6 +135,7 @@ void	ServerMFD::waitForBtnProcess()
 	}
 }
 
+
 void	ServerMFD::startBtnProcess()
 {
 	for (;;)
@@ -155,6 +152,7 @@ void	ServerMFD::startBtnProcess()
 		Sleep(20);
 	}
 }
+
 
 void	ServerMFD::endBtnProcess(int btnId)
 {
@@ -184,6 +182,7 @@ void	ServerMFD::endBtnProcess(int btnId)
 	ReleaseMutex(_btnMutex);
 }
 
+
 std::string	ServerMFD::getJSON()
 {
 	WaitForSingleObject(_btnMutex, INFINITE);
@@ -192,6 +191,7 @@ std::string	ServerMFD::getJSON()
 	return ret;
 }
 
+
 bool	ServerMFD::getClose()
 {
 	WaitForSingleObject(_btnMutex, INFINITE);
@@ -199,6 +199,7 @@ bool	ServerMFD::getClose()
 	ReleaseMutex(_btnMutex);
 	return ret;
 }
+
 
 void ServerMFD::_generateJSON()
 {

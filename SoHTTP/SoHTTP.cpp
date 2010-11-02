@@ -14,7 +14,10 @@
 /// Just launck the _loop method on the given SoHTTP object pointer.
 DWORD WINAPI startLoop(__in LPVOID lpParameter)
 {
+	// Launch _loop
 	((SoHTTP*)lpParameter)->_loop();
+
+	// Thread return value
 	return 0;
 }
 
@@ -30,17 +33,25 @@ struct hConnectionParam
 /// Just launck the _handleConnection method on the given SoHTTP object pointer with the given socket.
 DWORD WINAPI handleConnection(__in LPVOID lpParameter)
 {
+	// Get the param structure from the function argument
 	hConnectionParam *param = (hConnectionParam*)lpParameter;
+
+	// Launch _handleConnection
 	param->http->_handleConnection(param->connection);
+
+	// Delete the parameters structure
 	delete param;
+
+	// Thread return value
 	return 0;
 }
 
 
 SoHTTP::SoHTTP()
 {
+	// Create the mutex
 	_childrenThreadsMutex = CreateMutex(NULL, FALSE, NULL);
-}_childrenThreads
+}
 
 
 SoHTTP::~SoHTTP(void)
@@ -191,7 +202,7 @@ void	SoHTTP::_loop()
 void	SoHTTP::_handleConnection(SOCKET connection)
 {
 	// The parsing state to know which state is the current in the parsing loop
-	enum { PARSING_FISRT_LINE ; PARSING_HEADERS ; READING_BODY } state = PARSING_FISRT_LINE;
+	enum { PARSING_FISRT_LINE , PARSING_HEADERS , READING_BODY } state = PARSING_FISRT_LINE;
 	
 	// The buffer of character to parse
 	std::string buffer;
