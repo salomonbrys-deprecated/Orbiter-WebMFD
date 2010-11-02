@@ -21,7 +21,7 @@ class LaunchpadWebMFD : public LaunchpadItem
 {
 public:
 	/// Constructor
-	/// \param[in]	hDll	The Web MFD module DLL
+	/// \param[in]	hDll	The WebMFD module DLL
 	LaunchpadWebMFD(HINSTANCE hDLL);
 	
 	/// Orbiter LaunchpadItem callback that returns the name of the configuration dialog
@@ -59,7 +59,7 @@ public:
 	int Port() { return _port; }
 
 private:
-	/// The Web MFD module DLL
+	/// The WebMFD module DLL
 	HINSTANCE	hModule;
 	
 	/// The port on which the server will be running

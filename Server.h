@@ -64,8 +64,8 @@ public:
 	/// \param[in]	format	"mpng" or "mjpeg" or "". The image format on which the MFD was informed.
 	void			closeMFD(const std::string &key, const std::string &format = "" );
 
-	/// Callback used by WebMFD.cpp to update the open and registered MFDs.
-	void			clbkOrbiter();
+	/// Callback used by the WebMFD Module Class to handle all the preStep MFDs actions.
+	void			clbkOrbiterPreStep();
 
 protected:
 	/// Callback used by SoHTTP to handle a HTTP request / connection.
@@ -132,7 +132,7 @@ private:
 	typedef std::queue<std::pair<ServerMFD*, int> > BtnQueue;
 	
 	/// The button to inform pression in Orbiter in the main thread
-	BtnQueue			_toPush;
+	BtnQueue			_btnPress;
 
 	/// The mutex to access MFD Map and different event queues
 	HANDLE				_mfdsMutex;

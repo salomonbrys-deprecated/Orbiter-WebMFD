@@ -58,6 +58,9 @@ public:
 	/// \param[in]	hSurf	The surface containing the new MFD image
 	virtual void	clbkRefreshDisplay(SURFHANDLE hSurf);
 
+	/// Callback called by Orbiter when the buttons change
+	virtual void clbkRefreshButtons();
+
 	/// Informs the ServerMFD that there is one more follower that will be looking at its PNG image
 	void			addPng() { ++_png; }
 
@@ -81,6 +84,7 @@ public:
 	unsigned int	Followers() { return _png + _jpeg + _nox; }
 
 	/// Returns a file handle to the desired image if and only if the prevId is not the current image id.
+	/// The current id can never be 0, so a 0 prevId means that it should always return the file.
 	/// This will return INVALID_HANDLE_VALUE if:
 	///   - The image is requested in a format that does not have any followers.
 	///   - prevId is the same as the current image id.
@@ -106,13 +110,18 @@ public:
 	/// Can be called from any thread.
 	void			waitForBtnProcess();
 
-	/// Ends the current button process.
+	/// Execute the a button process.
 	/// Must be called from the main Orbiter thread as it uses Orbiter API.
-	void			endBtnProcess(int btnId);
+	void			execBtnProcess(int btnId);
 
-	/// Returns the JSON string with all the button labels.
+	/// Returns the JSON string with all the button labels
 	/// \return All buttons label in a JSON string
 	std::string		getJSON();
+
+	/// Returns the JSON string with all the button labels if and only if the prevId is not the current button labels id
+	/// The current id can never be 0, so a 0 prevId means that it should always return the JSON string.
+	/// \return All buttons label in a JSON string or an empty string
+	std::string		getJSONIf(unsigned int &prevId);
 
 	/// Returns true if the close button has been pressed.
 	/// Any folower should call this regularly and close the MFD if it returns true.
@@ -127,6 +136,7 @@ protected:
 
 private:
 	/// Generates the JSON string and stores it in _JSON.
+	/// Must be called from the main Orbiter thread.
 	void			_generateJSON();
 
 	/// The MFD specifications.
@@ -138,7 +148,7 @@ private:
 	/// The mutex to access the files.
 	HANDLE			_fileMutex;
 
-	/// The id of the current image. Is incremented at each MFD refresh.
+	/// The id of the current image. Is incremented at each MFD refresh. Cannot be 0.
 	unsigned int	_fileId;
 
 	/// The number of PNG folowers.
@@ -151,13 +161,17 @@ private:
 	unsigned int	_nox;
 
 	/// The mutex to handle the button processes.
-	HANDLE		_btnMutex;
+	HANDLE			_btnMutex;
 
-	/// Wether there is a button process running or not.
-	bool		_btnProcess;
+	/// The id of the current button labels. Is incremented at each button label change. Cannot be 0.
+	unsigned int	_btnLabelsId;
 
 	/// Wether the close button have been pressed or not.
 	bool		_btnClose;
+
+	/// The button process binary semaphore: locked when a button process is running.
+	/// Is a binary semaphore instead of a mutex because the mutex has thread ownership which breaks the required behaviour.
+	HANDLE		_btnProcessSmp;
 
 	/// The labels of all buttons encoded in JSON
 	std::string _JSON;

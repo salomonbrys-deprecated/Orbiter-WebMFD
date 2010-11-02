@@ -8,7 +8,6 @@
 #include "LaunchpadWebMFD.h"
 
 #include <iostream>
-#include <sstream>
 #include <list>
 #include <GdiPlus.h>
 #include <Wincrypt.h>
@@ -18,6 +17,9 @@ typedef std::list<std::string> stringList;
 
 /// Utility macro to send a null-terminated charcater string on a socket.
 #define ssend(socket, str)	send(socket, str, strlen(str), 0)
+
+/// Macro that defines an int that is the MFD refresh time divided by 10 in milliseconds if it is > 10, else 10
+#define WEBMFD_REFRESH_ASK_MS (((_interval * 1000 / 10) > 10) ? (_interval * 1000 / 10) : 10)
 
 INT32 getBigEndian(INT32 i);
 
@@ -161,7 +163,7 @@ void Server::closeMFD(const std::string &key, const std::string &format /* = "" 
 }
 
 
-void Server::clbkOrbiter()
+void Server::clbkOrbiterPreStep()
 {
 	// Try to be able to access _mfds by trying to gain acces to its mutex
 	// As this callback will be called *every* frame, we do not wait for the mutex to be free.
@@ -181,9 +183,9 @@ void Server::clbkOrbiter()
 	for (; !_toUnregister.empty(); _toUnregister.pop())
 		_toUnregister.front()->unRegister();
 
-	// Call the Orbiter MFD endBtnProcess for each button pressed event registered MFD.
-	for (; !_toPush.empty(); _toPush.pop())
-		_toPush.front().first->endBtnProcess(_toPush.front().second);
+	// Call the Orbiter MFD execBtnProcess for each button pressed event registered MFD.
+	for (; !_btnPress.empty(); _btnPress.pop())
+		_btnPress.front().first->execBtnProcess(_btnPress.front().second);
 
 	// Release the _mfds access mutex
 	ReleaseMutex(_mfdsMutex);
@@ -339,7 +341,7 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 				}
 				
 				// Wait for a tenth of the refreshing interval before asking if there is a new image
-				Sleep((DWORD)(_interval * 1000 / 10));
+				Sleep((DWORD)(WEBMFD_REFRESH_ASK_MS));
 			}
 			
 			// Close the MFD
@@ -560,25 +562,59 @@ void Server::handleBtnRequest(SOCKET connection, Request & request)
 	// Sending the WebSocket hashed handshake
 	send(connection, (char*)rgbHash, 16, 0);
 
+	// Set the connection socket to timeout.
+	// This is necessary for regular button check
+	int toVal = (int)WEBMFD_REFRESH_ASK_MS;
+	setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, (char*)&toVal, sizeof(int));
+
+	// Id of the button labels, used to check if the button labels have changed
+	unsigned int BtnPrevId = 0;
+
 	// Infinite loop that will run until the connection stops
 	for (;;)
 	{
+		// Get the JSON string if the button labels have changed
+		std::string JSON = mfd->getJSONIf(BtnPrevId);
+
+		// If the JSON string has evolved, it is returned
+		if (!JSON.empty())
+		{
+			// send the buttons status in JSON inside a WebMFD message
+			send(connection, "\0", 1, 0);
+			ssend(connection, JSON.c_str());
+			int sent = send(connection, "\xFF", 1, 0);
+
+			// If the sending of the response has failed, break the connection
+			if (sent == SOCKET_ERROR)
+				break ;
+		}
+
 		// The buffer to read the buttons pressed
 		unsigned char buf[5] = {0,};
 		
 		// Read 4 bytes from the sockets which should be:
 		//   255 <btnId-ascii-digit-tenth> <btnId-ascii-digit-unit> 0
 		int ret = recv(connection, (char*)buf, 4, 0);
-		
-		// If the read has failed, or if the first byte is not 255, break the connection
-		if (ret <= 0 /*|| buf[0] != 255*/)
-			break ;
+
+		// If the read has failed
+		if (ret <= 0)
+		{
+			// If the read has failed because of a timeout, continue the loop
+			if (WSAGetLastError() == WSAETIMEDOUT)
+				continue ;
+			
+			// If the read has failed for any other reason, break the connection
+			break;
+		}
+
+		// If the packet is not a 4 bytes websocket message, ignores it
+		if (ret != 4 || buf[0] != 0 || buf[3] != 255)
+			continue ;
 
 		// Reading the btnId (ignoring the first byte, which is 255)
 		int btnId = atoi((const char *)buf + 1);
 
-		// If the button Id is a correct number
-		// It may very well be -1, which means that this is just an enquiry and not a button press
+		// If the given button Id is a correct number
 		if (btnId >= 0)
 		{
 			// Inform that we want to start a button press
@@ -588,7 +624,7 @@ void Server::handleBtnRequest(SOCKET connection, Request & request)
 			// We are probably not in the main (Orbiter) thread
 			// Therefore, we cannot use directly the Orbiter API as Orbiter is not thread-safe (Martin Schweiger if you read this...)
 			WaitForSingleObject(_mfdsMutex, INFINITE);
-			_toPush.push(std::pair<ServerMFD*, int>(mfd, btnId));
+			_btnPress.push(std::pair<ServerMFD*, int>(mfd, btnId));
 			ReleaseMutex(_mfdsMutex);
 			
 			// Wait for the end of the button process
@@ -599,18 +635,15 @@ void Server::handleBtnRequest(SOCKET connection, Request & request)
 				break ;
 
 			// Force the refresh of the MFD as the button press has probably a consequence on the display
+			WaitForSingleObject(_mfdsMutex, INFINITE);
 			_forceRefresh.push(mfd);
+			ReleaseMutex(_mfdsMutex);
 		}
-
-		// send the buttons status in JSON inside a WebMFD message
-		send(connection, "\0", 1, 0);
-		std::string JSON = mfd->getJSON();
-		ssend(connection, JSON.c_str());
-		int sent = send(connection, "\xFF", 1, 0);
-
-		// If the sending of the response has failed, break the connection
-		if (sent == SOCKET_ERROR)
-			break ;
+		
+		// If the given button id is -1, it means that this is just an enquiry and not a button press
+		// Therefore, BtnPrevId is set to 0, which will force, in the begining of the next loop, the button JSON send
+		else if (btnId == -1)
+			BtnPrevId = 0;
 	}
 
 	// Close the MFD
@@ -650,7 +683,7 @@ void Server::handleBtnHRequest(SOCKET connection, Request & request)
 		// We are probably not in the main (Orbiter) thread
 		// Therefore, we cannot use directly the Orbiter API as Orbiter is not thread-safe (Martin Schweiger if you read this...)
 		WaitForSingleObject(_mfdsMutex, INFINITE);
-		_toPush.push(std::pair<ServerMFD*, int>(mfd, btnId));
+		_btnPress.push(std::pair<ServerMFD*, int>(mfd, btnId));
 		ReleaseMutex(_mfdsMutex);
 
 		// Wait for the end of the button process
@@ -663,6 +696,7 @@ void Server::handleBtnHRequest(SOCKET connection, Request & request)
 	}
 
 	// send the buttons status in JSON
+	unsigned int btnPrevId = 0;
 	ssend(connection, mfd->getJSON().c_str());
 
 	// Close the MFD
