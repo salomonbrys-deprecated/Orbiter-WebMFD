@@ -135,6 +135,10 @@ protected:
 	virtual ~ServerMFD(void);
 
 private:
+	/// Called to regenerate the JPEG and PNG images
+	/// This must be called while having the ownership of _fileMutex
+	void			_generateImage();
+
 	/// Generates the JSON string and stores it in _JSON.
 	/// Must be called from the main Orbiter thread.
 	void			_generateJSON();
@@ -149,7 +153,13 @@ private:
 	HANDLE			_fileMutex;
 
 	/// The id of the current image. Is incremented at each MFD refresh. Cannot be 0.
-	unsigned int	_fileId;
+	unsigned int	_surfaceId;
+
+	/// The file SURFHANDLE used in threads
+	SURFHANDLE		_surface;
+
+	/// Wether the image needs to be regenerated.
+	bool			_surfaceHasChanged;
 
 	/// The number of PNG folowers.
 	unsigned int	_png;
@@ -167,14 +177,14 @@ private:
 	unsigned int	_btnLabelsId;
 
 	/// Wether the close button have been pressed or not.
-	bool		_btnClose;
+	bool			_btnClose;
 
 	/// The button process binary semaphore: locked when a button process is running.
 	/// Is a binary semaphore instead of a mutex because the mutex has thread ownership which breaks the required behaviour.
-	HANDLE		_btnProcessSmp;
+	HANDLE			_btnProcessSmp;
 
 	/// The labels of all buttons encoded in JSON
-	std::string _JSON;
+	std::string		_JSON;
 };
 
 #endif // __SERVERMFD_H

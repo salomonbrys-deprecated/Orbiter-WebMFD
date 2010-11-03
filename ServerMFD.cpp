@@ -17,7 +17,7 @@ ServerMFD::ServerMFD() :
 	// Initializes the specs and the ExternMFD with those specs
 	_spec(0, 0, 255, 255, 6, 6, 255 / 7, (255 * 2) / 13), ExternMFD(_spec),
 	// Default values for all properties
-	_png(0), _jpeg(0), _nox(0), _fileId(1), _btnLabelsId(1), _btnClose(false)
+	_png(0), _jpeg(0), _nox(0), _surfaceId(1), _surfaceHasChanged(false), _btnLabelsId(1), _btnClose(false)
 {
 	// First thing a MFD needs to do
 	Resize(_spec);
@@ -38,6 +38,9 @@ ServerMFD::ServerMFD() :
 
 	// Create the semaphore
 	_btnProcessSmp = CreateSemaphore(NULL, 1, 1, NULL);
+
+	// Create the surface
+	_surface = oapiCreateSurface(255, 255);
 }
 
 
@@ -60,39 +63,10 @@ void ServerMFD::clbkRefreshDisplay(SURFHANDLE hSurf)
 	if (!hSurf)
 		return ;
 
-	// Get the Device Context from the Surface
-	HDC hDCsrc = oapiGetDC(hSurf);
-
-	// Copy the Device Context into a Bitmap
-	HDC cdc = CreateCompatibleDC(hDCsrc);
-	HBITMAP cbm = CreateCompatibleBitmap(hDCsrc, Width(), Height());
-	HBITMAP oldbm = (HBITMAP)SelectObject(cdc, cbm);
-	BitBlt(cdc, 0, 0, Width(), Height(), hDCsrc, 0, 0, SRCCOPY);
-	SelectObject(cdc, oldbm);
-
-	// Create an image from the bitmap
-	CImage img;
-	img.Attach(cbm);
-
-	// Wait to be able to access the image files by waiting to gain acces to their mutex
 	WaitForSingleObject(_fileMutex, INFINITE);
-
-	// If the MFD have any PNG followers, then saves the image into the png temporary image file
-	if (_png > 0)
-	 	img.Save(_T((_tempFileName + ".png").c_str()), Gdiplus::ImageFormatPNG);
-
-	// If the MFD have any JPEG followers, then saves the image into the jpeg temporary image file
-	if (_jpeg > 0)
-	 	img.Save(_T((_tempFileName + ".jpeg").c_str()), Gdiplus::ImageFormatJPEG);
-
-	// Incrementing the image id, modulo the maximum possible value for a int
-	_fileId = ((_fileId + 1) % (UINT_MAX - 1)) + 1;
-
-	// Release the image files access mutex
+	oapiBlt(_surface, hSurf, 0, 0, 0, 0, Width(), Height());
+	_surfaceHasChanged = true;
 	ReleaseMutex(_fileMutex);
-
-	// Release the Surface Device Context
-	oapiReleaseDC(hSurf, hDCsrc);
 }
 
 void ServerMFD::clbkRefreshButtons ()
@@ -106,9 +80,13 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 	// Wait to be able to access the image files by waiting to gain acces to their mutex
 	WaitForSingleObject(_fileMutex, INFINITE);
 
+	// If the image need to be regenerated, do it
+	if (_surfaceHasChanged)
+		_generateImage();
+
 	// If the request gave the same id as the current id,
 	// it means that the image has not changed since last request.
-	if (prevId == _fileId)
+	if (prevId == _surfaceId)
 	{
 		// Release the image files access mutex
 		ReleaseMutex(_fileMutex);
@@ -154,7 +132,7 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 	}
 
 	// Update the given id reference
-	prevId = _fileId;
+	prevId = _surfaceId;
 
 	// Open the requested image file
 	HANDLE ret = CreateFile((_tempFileName + "." + format).c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -222,7 +200,7 @@ void	ServerMFD::execBtnProcess(int btnId)
 		// which will un-freeze them and enable to check getClose.
 		// Because the MFD has been shutdown, the image will no longer be refreshed and the id will no longer change.
 		WaitForSingleObject(_fileMutex, INFINITE);
-		++_fileId;
+		++_surfaceId;
 		ReleaseMutex(_fileMutex);
 	}
 
@@ -295,6 +273,42 @@ bool	ServerMFD::getClose()
 
 	// Return the button close information
 	return ret;
+}
+
+
+void ServerMFD::_generateImage()
+{
+	OutputDebugString("Regeneration\n");
+	// Get the Device Context from the Surface
+	HDC hDCsrc = oapiGetDC(_surface);
+
+	// Copy the Device Context into a Bitmap
+	HDC cdc = CreateCompatibleDC(hDCsrc);
+	HBITMAP cbm = CreateCompatibleBitmap(hDCsrc, Width(), Height());
+	HBITMAP oldbm = (HBITMAP)SelectObject(cdc, cbm);
+	BitBlt(cdc, 0, 0, Width(), Height(), hDCsrc, 0, 0, SRCCOPY);
+	SelectObject(cdc, oldbm);
+
+	// Release the Surface Device Context
+	oapiReleaseDC(_surface, hDCsrc);
+
+	// Create an image from the bitmap
+	CImage img;
+	img.Attach(cbm);
+
+	// If the MFD have any PNG followers, then saves the image into the png temporary image file
+	if (_png > 0)
+	 	img.Save(_T((_tempFileName + ".png").c_str()), Gdiplus::ImageFormatPNG);
+
+	// If the MFD have any JPEG followers, then saves the image into the jpeg temporary image file
+	if (_jpeg > 0)
+	 	img.Save(_T((_tempFileName + ".jpeg").c_str()), Gdiplus::ImageFormatJPEG);
+
+	// Incrementing the image id, modulo the maximum possible value for a int
+	_surfaceId = ((_surfaceId + 1) % (UINT_MAX - 1)) + 1;
+
+	// No need to regenrate until the surface changes
+	_surfaceHasChanged = false;
 }
 
 
