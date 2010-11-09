@@ -15,7 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{1E1B3EE7-1010-47C6-B032-58EF3825CCD0}</ProjectGuid>
+    <ProjectGuid>{2F57A30A-6D81-43C2-A91B-8E39787216B2}</ProjectGuid>
     <RootNamespace>WebMFD</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -32,12 +32,12 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(SolutionDir)..\..\resources\Orbiter plugin.props" />
+    <Import Project="$(ProjectDir)..\..\resources\Orbiter plugin.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(SolutionDir)..\..\resources\Orbiter plugin.props" />
-    <Import Project="$(SolutionDir)..\..\resources\Orbiter debug.props" />
+    <Import Project="$(ProjectDir)..\..\resources\Orbiter plugin.props" />
+    <Import Project="$(ProjectDir)..\..\resources\Orbiter debug.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>

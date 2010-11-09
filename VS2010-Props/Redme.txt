@@ -1,0 +1,3 @@
+These are .props orbiter files converted for VS2010
+
+Put them in the Orbitersdk\resources directory
