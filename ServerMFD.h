@@ -192,6 +192,9 @@ private:
 
 	/// The copied bitmap from surface
 	HBITMAP			_bmpFromSurface;
+
+	/// The mutex to access the image.
+	HANDLE			_imageMutex;
 };
 
 #endif // __SERVERMFD_H

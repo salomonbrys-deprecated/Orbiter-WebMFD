@@ -35,6 +35,7 @@ ServerMFD::ServerMFD() :
 	// Create the mutexes
 	_btnMutex = CreateMutex(NULL, FALSE, NULL);
 	_fileMutex = CreateMutex(NULL, FALSE, NULL);
+	_imageMutex = CreateMutex(NULL, FALSE, NULL);
 
 	// Create the semaphore
 	_btnProcessSmp = CreateSemaphore(NULL, 1, 1, NULL);
@@ -54,6 +55,7 @@ ServerMFD::~ServerMFD(void)
 	CloseHandle(_btnMutex);
 	CloseHandle(_btnProcessSmp);
 	CloseHandle(_fileMutex);
+	CloseHandle(_imageMutex);
 }
 
 
@@ -63,10 +65,10 @@ void ServerMFD::clbkRefreshDisplay(SURFHANDLE hSurf)
 	if (!hSurf)
 		return ;
 
-	WaitForSingleObject(_fileMutex, INFINITE);
+	WaitForSingleObject(_imageMutex, INFINITE);
 	oapiBlt(_surface, hSurf, 0, 0, 0, 0, Width(), Height());
 	_surfaceHasChanged = true;
-	ReleaseMutex(_fileMutex);
+	ReleaseMutex(_imageMutex);
 }
 
 void ServerMFD::clbkRefreshButtons ()
@@ -83,19 +85,16 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 	// If the image need to be regenerated, do it
 	if (_surfaceHasChanged)
 	{
+		// Wait to be able to access the image by waiting to gain acces to its mutex
+		WaitForSingleObject(_imageMutex, INFINITE);
+
 		// Copy the MFD surface to bitmap
 		_copySurfaceToBitmap();
 
 		// Release the image files access mutex
-		ReleaseMutex(_fileMutex);
-
+		ReleaseMutex(_imageMutex);
 
 		_generateImage();
-	}
-	else
-	{
-		// Release the image files access mutex
-		ReleaseMutex(_fileMutex);
 	}
 
 	// If the request gave the same id as the current id,
