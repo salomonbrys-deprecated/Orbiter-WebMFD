@@ -290,7 +290,6 @@ bool	ServerMFD::getClose()
 
 void ServerMFD::_copySurfaceToBitmap()
 {
-	OutputDebugString("Copy\n");
 	// Get the Device Context from the Surface
 	HDC hDCsrc = oapiGetDC(_surface);
 
@@ -307,7 +306,6 @@ void ServerMFD::_copySurfaceToBitmap()
 
 void ServerMFD::_generateImage()
 {
-	OutputDebugString("Regeneration\n");
 	// Create an image from the bitmap
 	CImage img;
 	img.Attach(_bmpFromSurface);
