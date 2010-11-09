@@ -193,7 +193,7 @@ private:
 	/// The copied bitmap from surface
 	HBITMAP			_bmpFromSurface;
 
-	/// The mutex to access the image.
+	/// The mutex to access the image surface
 	HANDLE			_imageMutex;
 };
 

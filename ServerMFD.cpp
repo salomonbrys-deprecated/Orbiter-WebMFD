@@ -65,9 +65,16 @@ void ServerMFD::clbkRefreshDisplay(SURFHANDLE hSurf)
 	if (!hSurf)
 		return ;
 
+	// Wait to be able to access the image surface by waiting to gain acces to its mutex
 	WaitForSingleObject(_imageMutex, INFINITE);
+
+	// Save the given surface to a local surface that is manipulable by other threads
 	oapiBlt(_surface, hSurf, 0, 0, 0, 0, Width(), Height());
+
+	// State that the surface has changed (trigering, in a follower thread, the image generation)
 	_surfaceHasChanged = true;
+
+	// Release the image surface access mutex
 	ReleaseMutex(_imageMutex);
 }
 
@@ -85,15 +92,16 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 	// If the image need to be regenerated, do it
 	if (_surfaceHasChanged)
 	{
-		// Wait to be able to access the image by waiting to gain acces to its mutex
+		// Wait to be able to access the image surface by waiting to gain acces to its mutex
 		WaitForSingleObject(_imageMutex, INFINITE);
 
 		// Copy the MFD surface to bitmap
 		_copySurfaceToBitmap();
 
-		// Release the image files access mutex
+		// Release the image surface access mutex
 		ReleaseMutex(_imageMutex);
 
+		// Generate the image from HBITMAP
 		_generateImage();
 	}
 
@@ -302,6 +310,9 @@ void ServerMFD::_copySurfaceToBitmap()
 
 	// Release the Surface Device Context
 	oapiReleaseDC(_surface, hDCsrc);
+
+	// No need to regenrate until the surface changes
+	_surfaceHasChanged = false;
 }
 
 void ServerMFD::_generateImage()
@@ -320,9 +331,6 @@ void ServerMFD::_generateImage()
 
 	// Incrementing the image id, modulo the maximum possible value for a int
 	_surfaceId = ((_surfaceId + 1) % (UINT_MAX - 1)) + 1;
-
-	// No need to regenrate until the surface changes
-	_surfaceHasChanged = false;
 }
 
 
