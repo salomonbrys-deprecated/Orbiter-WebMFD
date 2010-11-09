@@ -82,7 +82,21 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 
 	// If the image need to be regenerated, do it
 	if (_surfaceHasChanged)
+	{
+		// Copy the MFD surface to bitmap
+		_copySurfaceToBitmap();
+
+		// Release the image files access mutex
+		ReleaseMutex(_fileMutex);
+
+
 		_generateImage();
+	}
+	else
+	{
+		// Release the image files access mutex
+		ReleaseMutex(_fileMutex);
+	}
 
 	// If the request gave the same id as the current id,
 	// it means that the image has not changed since last request.
@@ -275,26 +289,29 @@ bool	ServerMFD::getClose()
 	return ret;
 }
 
-
-void ServerMFD::_generateImage()
+void ServerMFD::_copySurfaceToBitmap()
 {
-	OutputDebugString("Regeneration\n");
+	OutputDebugString("Copy\n");
 	// Get the Device Context from the Surface
 	HDC hDCsrc = oapiGetDC(_surface);
 
 	// Copy the Device Context into a Bitmap
 	HDC cdc = CreateCompatibleDC(hDCsrc);
-	HBITMAP cbm = CreateCompatibleBitmap(hDCsrc, Width(), Height());
-	HBITMAP oldbm = (HBITMAP)SelectObject(cdc, cbm);
+	_bmpFromSurface = CreateCompatibleBitmap(hDCsrc, Width(), Height());
+	HBITMAP oldbm = (HBITMAP)SelectObject(cdc, _bmpFromSurface);
 	BitBlt(cdc, 0, 0, Width(), Height(), hDCsrc, 0, 0, SRCCOPY);
 	SelectObject(cdc, oldbm);
 
 	// Release the Surface Device Context
 	oapiReleaseDC(_surface, hDCsrc);
+}
 
+void ServerMFD::_generateImage()
+{
+	OutputDebugString("Regeneration\n");
 	// Create an image from the bitmap
 	CImage img;
-	img.Attach(cbm);
+	img.Attach(_bmpFromSurface);
 
 	// If the MFD have any PNG followers, then saves the image into the png temporary image file
 	if (_png > 0)

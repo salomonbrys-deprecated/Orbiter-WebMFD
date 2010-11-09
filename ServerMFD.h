@@ -135,6 +135,10 @@ protected:
 	virtual ~ServerMFD(void);
 
 private:
+	/// Called to copy the content of MFD surface to bitmap
+	/// This must be called before releasing file mutex and before calling _generateImage()
+	void ServerMFD::_copySurfaceToBitmap();
+
 	/// Called to regenerate the JPEG and PNG images
 	/// This must be called while having the ownership of _fileMutex
 	void			_generateImage();
@@ -185,6 +189,9 @@ private:
 
 	/// The labels of all buttons encoded in JSON
 	std::string		_JSON;
+
+	/// The copied bitmap from surface
+	HBITMAP			_bmpFromSurface;
 };
 
 #endif // __SERVERMFD_H
