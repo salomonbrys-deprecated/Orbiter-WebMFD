@@ -89,6 +89,8 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 	if (_surfaceHasChanged)
 	{
 		// Wait to be able to access the image surface by waiting to gain acces to its mutex
+		_bmpFromSurface = (HBITMAP)LoadImage(NULL, _T("testimage.bmp"), IMAGE_BITMAP, 0,0, LR_LOADFROMFILE);
+
 		WaitForSingleObject(_imageMutex, INFINITE);
 
 		// Copy the MFD surface to bitmap
@@ -298,8 +300,7 @@ void ServerMFD::_copySurfaceToBitmap()
 	HDC hDCsrc = oapiGetDC(_surface);
 
 	// Copy the Device Context into a Bitmap
-	HDC cdc = CreateCompatibleDC(hDCsrc);
-	_bmpFromSurface = CreateCompatibleBitmap(hDCsrc, Width(), Height());
+	HDC cdc = CreateCompatibleDC(hDCsrc);	
 	HBITMAP oldbm = (HBITMAP)SelectObject(cdc, _bmpFromSurface);
 	BitBlt(cdc, 0, 0, Width(), Height(), hDCsrc, 0, 0, SRCCOPY);
 	SelectObject(cdc, oldbm);
