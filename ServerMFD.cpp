@@ -15,7 +15,7 @@ ServerMFD::ServerMFD(const std::string & key) :
 	// Initializes the specs and the ExternMFD with those specs
 	_spec(0, 0, 255, 255, 6, 6, 255 / 7, (255 * 2) / 13), ExternMFD(_spec),
 	// Default values for all properties
-	_png(0), _jpeg(0), _nox(0), _surfaceId(1), _surfaceHasChanged(false), _btnLabelsId(1), _btnClose(false)
+	_png(0), _jpeg(0), _nox(0), _surfaceId(1), _bmpFromSurface(0), _surfaceHasChanged(false), _btnLabelsId(1), _btnClose(false)
 {
 	// First thing a MFD needs to do
 	Resize(_spec);
@@ -38,6 +38,9 @@ ServerMFD::ServerMFD(const std::string & key) :
 
 	// Create the surface
 	_surface = oapiCreateSurface(255, 255);
+
+	// Load a compatible bitmap in order to get a compatible HBITMAP (...no comment...)
+	_bmpFromSurface = (HBITMAP)LoadImage(NULL, _T("WebMFD\\_testimage.bmp"), IMAGE_BITMAP, 0,0, LR_LOADFROMFILE);
 }
 
 
@@ -89,8 +92,6 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 	if (_surfaceHasChanged)
 	{
 		// Wait to be able to access the image surface by waiting to gain acces to its mutex
-		_bmpFromSurface = (HBITMAP)LoadImage(NULL, _T("testimage.bmp"), IMAGE_BITMAP, 0,0, LR_LOADFROMFILE);
-
 		WaitForSingleObject(_imageMutex, INFINITE);
 
 		// Copy the MFD surface to bitmap
@@ -328,6 +329,12 @@ void ServerMFD::_generateImage()
 
 	// Incrementing the image id, modulo the maximum possible value for a int
 	_surfaceId = ((_surfaceId + 1) % (UINT_MAX - 1)) + 1;
+
+	// Detach the bitmap
+	img.Detach();
+
+	// Delete the image
+	img.Destroy();
 }
 
 
