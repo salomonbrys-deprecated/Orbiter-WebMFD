@@ -264,7 +264,7 @@ std::string	ServerMFD::getJSONIf(unsigned int &prevId)
 	if (prevId == _btnLabelsId)
 	{
 		// Release the button informations access mutex
-		ReleaseMutex(_fileMutex);
+		ReleaseMutex(_btnMutex);
 
 		// Return an empty string because the buttons labels have not changed
 		return "";
