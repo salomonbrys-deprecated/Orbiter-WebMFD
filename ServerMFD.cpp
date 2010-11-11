@@ -10,10 +10,8 @@
 #include <gdiplus.h>
 #include <limits.h>
 
-BOOL MyGetTempFileName(const char *prefix, char *filePath);
 
-
-ServerMFD::ServerMFD() :
+ServerMFD::ServerMFD(const std::string & key) :
 	// Initializes the specs and the ExternMFD with those specs
 	_spec(0, 0, 255, 255, 6, 6, 255 / 7, (255 * 2) / 13), ExternMFD(_spec),
 	// Default values for all properties
@@ -23,9 +21,7 @@ ServerMFD::ServerMFD() :
 	Resize(_spec);
 
 	// Get a temporary file path for the images
-	char	tmp[MAX_PATH];
-	MyGetTempFileName("ORB", tmp);
-	_tempFileName = tmp;
+	_tempFileName = std::string("WebMFD/_tmp/") + key;
 
 	// Start GDI
 	Gdiplus::GdiplusStartupInput gdiplusStartupInput;

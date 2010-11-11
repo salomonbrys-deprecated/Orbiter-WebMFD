@@ -100,7 +100,7 @@ ServerMFD * Server::openMFD(const std::string &key, const std::string &format /*
 	if (_mfds.find(key) == _mfds.end())
 	{
 		// Create a new MFD
-		_mfds[key] = new ServerMFD;
+		_mfds[key] = new ServerMFD(key);
 
 		// Register the given format
 		if (format == "png")
@@ -377,7 +377,7 @@ void Server::handleWebRequest(SOCKET connection, Request & request)
 		// Browse the WebMFD directory...
 		do
 			// If the item is a directory and is not the current directory
-			if ((FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY && FindFileData.cFileName[0] != '.')
+			if ((FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY && FindFileData.cFileName[0] != '.' && FindFileData.cFileName[0] != '_')
 				// Add it's name to the list
 				dirs.push_back(FindFileData.cFileName);
 		// ...While there are item to be found

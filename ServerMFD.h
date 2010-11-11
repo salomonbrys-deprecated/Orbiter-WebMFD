@@ -36,7 +36,7 @@ class ServerMFD : public ExternMFD
 {
 public:
 	/// Constructor
-	ServerMFD();
+	ServerMFD(const std::string & key);
 
 	/// Gets the MFD Width
 	/// FIXME: Currently, always 255
