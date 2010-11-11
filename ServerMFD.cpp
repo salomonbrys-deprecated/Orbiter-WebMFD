@@ -10,18 +10,16 @@
 #include <gdiplus.h>
 #include <limits.h>
 
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 
 ServerMFD::ServerMFD(const std::string & key) :
 	// Initializes the specs and the ExternMFD with those specs
 	_spec(0, 0, 255, 255, 6, 6, 255 / 7, (255 * 2) / 13), ExternMFD(_spec),
 	// Default values for all properties
-	_png(0), _jpeg(0), _nox(0), _surfaceId(1), _bmpFromSurface(0), _surfaceHasChanged(false), _btnLabelsId(1), _btnClose(false)
+	_pngFollowers(0), _jpegFollowers(0), _noxFollowers(0), _surface(0), _surfaceId(0), _surfaceHasChanged(false), _btnLabelsId(1), _btnClose(false)
 {
 	// First thing a MFD needs to do
 	Resize(_spec);
-
-	// Get a temporary file path for the images
-	_tempFileName = std::string("WebMFD/_tmp/") + key;
 
 	// Start GDI
 	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
@@ -30,7 +28,7 @@ ServerMFD::ServerMFD(const std::string & key) :
 
 	// Create the mutexes
 	_btnMutex = CreateMutex(NULL, FALSE, NULL);
-	_fileMutex = CreateMutex(NULL, FALSE, NULL);
+	_streamMutex = CreateMutex(NULL, FALSE, NULL);
 	_imageMutex = CreateMutex(NULL, FALSE, NULL);
 
 	// Create the semaphore
@@ -46,15 +44,20 @@ ServerMFD::ServerMFD(const std::string & key) :
 
 ServerMFD::~ServerMFD(void)
 {
-	// Delete the temporary images files
-	DeleteFile((_tempFileName + ".png").c_str());
-	DeleteFile((_tempFileName + ".jpeg").c_str());
-
 	// Destroy the mutexes
 	CloseHandle(_btnMutex);
 	CloseHandle(_btnProcessSmp);
-	CloseHandle(_fileMutex);
+	CloseHandle(_streamMutex);
 	CloseHandle(_imageMutex);
+
+	// Delete the PNG stream and it's allocated memory
+	if (_streamPNG.stream)
+		_streamPNG.stream->Release();
+
+	// Delete the JPEG stream and it's allocated memory
+	if (_streamJPEG.stream)
+		_streamJPEG.stream->Release();
+
 }
 
 
@@ -83,10 +86,10 @@ void ServerMFD::clbkRefreshButtons ()
 	_generateJSON();
 }
 
-HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
+imageStream * ServerMFD::getStreamIf(const std::string &format, unsigned int &prevId)
 {
-	// Wait to be able to access the image files by waiting to gain acces to their mutex
-	WaitForSingleObject(_fileMutex, INFINITE);
+	// Wait to be able to access the image buffers by waiting to gain acces to their mutex
+	WaitForSingleObject(_streamMutex, INFINITE);
 
 	// If the image need to be regenerated, do it
 	if (_surfaceHasChanged)
@@ -108,72 +111,75 @@ HANDLE ServerMFD::getFileIf(const std::string &format, unsigned int &prevId)
 	// it means that the image has not changed since last request.
 	if (prevId == _surfaceId)
 	{
-		// Release the image files access mutex
-		ReleaseMutex(_fileMutex);
+		// Release the image buffers access mutex
+		ReleaseMutex(_streamMutex);
 
 		// Return an invalid handle because the image has not changed
-		return INVALID_HANDLE_VALUE;
+		return 0;
 	}
+
+	// What will be returned
+	imageStream * ret = 0;
 
 	// If the image is requested using the PNG format
 	if (format == "png")
 	{
-		// If there are no PNG follower
-		if (_png <= 0)
+		// If there are no PNG follower or if the PNG stream has not been allocated
+		if (_pngFollowers <= 0 || !_streamPNG.stream)
 		{
-			// Release the image files access mutex
-			ReleaseMutex(_fileMutex);
+			// Release the image buffers access mutex
+			ReleaseMutex(_streamMutex);
 
 			// Return an invalid handle because the image has not been generated in PNG as there are no PNG followers
-			return INVALID_HANDLE_VALUE;
+			return 0;
 		}
+
+		// The PNG buffer will be returned
+		ret = &_streamPNG;
 	}
 	// If the image is requested using the JPEG format
-	else if (format == "jpeg")
+	else if (format == "jpeg" || !_streamJPEG.stream)
 	{
-		// If there are no JPEG follower
-		if (_jpeg <= 0)
+		// If there are no JPEG follower or if the PNG stream has not been allocated
+		if (_jpegFollowers <= 0)
 		{
-			// Release the image files access mutex
-			ReleaseMutex(_fileMutex);
+			// Release the image buffers access mutex
+			ReleaseMutex(_streamMutex);
 
 			// Return an invalid handle because the image has not been generated in JPEG as there are no JPEG followers
-			return INVALID_HANDLE_VALUE;
+			return 0;
 		}
+
+		// The JPEG buffer will be returned
+		ret = &_streamJPEG;
 	}
 	// The image is requested using an unknown format
 	else
 	{
-		// Release the image files access mutex
-		ReleaseMutex(_fileMutex);
+		// Release the image buffers access mutex
+		ReleaseMutex(_streamMutex);
 
 		// Return an invalid handle because the image has been requested in an unknown format
-		return INVALID_HANDLE_VALUE;
+		return 0;
 	}
 
 	// Update the given id reference
 	prevId = _surfaceId;
 
-	// Open the requested image file
-	HANDLE ret = CreateFile((_tempFileName + "." + format).c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-	// If the requested image file could not be open, release the image files access mutex
-	// If the requested image file could be open, then the mutex is kept until closeFile is called
-	if (ret == INVALID_HANDLE_VALUE)
-		ReleaseMutex(_fileMutex);
+	// Set the stream cursor at the beginning
+	LARGE_INTEGER moveBy;
+	moveBy.QuadPart = 0;
+	ret->stream->Seek(moveBy, STREAM_SEEK_SET, NULL);
 
 	// Return the file handle
 	return ret;
 }
 
 
-void ServerMFD::closeFile(HANDLE file)
+void ServerMFD::closeStream()
 {
-	// Closing the file handle
-	CloseHandle(file);
-
-	// Release the image files access mutex, enabling other thread to get the image and to update id
-	ReleaseMutex(_fileMutex);
+	// Release the image buffers access mutex, enabling other thread to get the image and to update id
+	ReleaseMutex(_streamMutex);
 }
 
 
@@ -215,13 +221,13 @@ void	ServerMFD::execBtnProcess(int btnId)
 		_btnClose = true;
 		ReleaseMutex(_btnMutex);
 
-		// Update the file id
-		// The image has not been updated but the file id is still incremented to force the refresh on all folowers,
+		// Update the surface id
+		// The image has not been updated but the surface id is still incremented to force the refresh on all folowers,
 		// which will un-freeze them and enable to check getClose.
 		// Because the MFD has been shutdown, the image will no longer be refreshed and the id will no longer change.
-		WaitForSingleObject(_fileMutex, INFINITE);
+		WaitForSingleObject(_streamMutex, INFINITE);
 		++_surfaceId;
-		ReleaseMutex(_fileMutex);
+		ReleaseMutex(_streamMutex);
 	}
 
 	// The button pressed is a regular button
@@ -263,7 +269,7 @@ std::string	ServerMFD::getJSONIf(unsigned int &prevId)
 	if (prevId == _btnLabelsId)
 	{
 		// Release the button informations access mutex
-		ReleaseMutex(_fileMutex);
+		ReleaseMutex(_btnMutex);
 
 		// Return an empty string because the buttons labels have not changed
 		return "";
@@ -313,28 +319,74 @@ void ServerMFD::_copySurfaceToBitmap()
 	_surfaceHasChanged = false;
 }
 
+
 void ServerMFD::_generateImage()
 {
-	// Create an image from the bitmap
-	CImage img;
-	img.Attach(_bmpFromSurface);
+	// Create a gdiplus image from the bitmap
+	Gdiplus::Bitmap * img = Gdiplus::Bitmap::FromHBITMAP(_bmpFromSurface, NULL);
 
-	// If the MFD have any PNG followers, then saves the image into the png temporary image file
-	if (_png > 0)
-	 	img.Save(_T((_tempFileName + ".png").c_str()), Gdiplus::ImageFormatPNG);
+	// Argument for later Seek call
+	LARGE_INTEGER moveBy;
+	moveBy.QuadPart = 0;
 
-	// If the MFD have any JPEG followers, then saves the image into the jpeg temporary image file
-	if (_jpeg > 0)
-	 	img.Save(_T((_tempFileName + ".jpeg").c_str()), Gdiplus::ImageFormatJPEG);
+	// If the MFD have any PNG followers, then saves the image into the png image stream
+	if (_pngFollowers > 0)
+	{
+		// If the PNG stream does not yet exists, allocates it
+		if (!_streamPNG.stream)
+		{
+			_streamPNG.Memory = GlobalAlloc(GMEM_MOVEABLE, 1024 * 64);
+			CreateStreamOnHGlobal(_streamPNG.Memory, TRUE, &_streamPNG.stream);
+		}
+
+		// Get the PNG encoder CLSID
+		CLSID pngClsid;
+		GetEncoderClsid(L"image/png", &pngClsid);
+
+		// Move the stream cursor to the beginning of the stream
+		_streamPNG.stream->Seek(moveBy, STREAM_SEEK_SET, NULL);
+
+		// Save the image into the stream
+		img->Save(_streamPNG.stream, &pngClsid);
+
+		// Get the size of the image according to the new cursor position
+		LARGE_INTEGER moveBy;
+		moveBy.QuadPart = 0;
+		ULARGE_INTEGER nPos;
+		_streamPNG.stream->Seek(moveBy, STREAM_SEEK_CUR, &nPos);
+		_streamPNG.size = nPos.QuadPart;
+	}
+
+	// If the MFD have any JPEG followers, then saves the image into the jpeg image stream
+	if (_jpegFollowers > 0)
+	{
+		// If the JPEG stream does not yet exists, allocates it
+		if (!_streamJPEG.stream)
+		{
+			_streamJPEG.Memory = GlobalAlloc(GMEM_MOVEABLE, 1024 * 64);
+			CreateStreamOnHGlobal(_streamJPEG.Memory, TRUE, &_streamJPEG.stream);
+		}
+
+		// Get the JPEG encoder CLSID
+		CLSID jpegClsid;
+		GetEncoderClsid(L"image/jpeg", &jpegClsid);
+
+		// Move the stream cursor to the beginning of the stream
+		_streamJPEG.stream->Seek(moveBy, STREAM_SEEK_SET, NULL);
+
+		// Save the image into the stream
+		img->Save(_streamJPEG.stream, &jpegClsid);
+
+		// Get the size of the image according to the new cursor position
+		LARGE_INTEGER moveBy;
+		moveBy.QuadPart = 0;
+		ULARGE_INTEGER nPos;
+		_streamJPEG.stream->Seek(moveBy, STREAM_SEEK_CUR, &nPos);
+		_streamJPEG.size = nPos.QuadPart;
+	}
 
 	// Incrementing the image id, modulo the maximum possible value for a int
 	_surfaceId = ((_surfaceId + 1) % (UINT_MAX - 1)) + 1;
-
-	// Detach the bitmap
-	img.Detach();
-
-	// Delete the image
-	img.Destroy();
 }
 
 
