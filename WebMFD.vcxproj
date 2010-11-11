@@ -132,7 +132,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Endian.cpp" />
-    <ClCompile Include="MyGetTempFileName.cpp" />
+    <ClCompile Include="GetEncoderClsid.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="LaunchpadWebMFD.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

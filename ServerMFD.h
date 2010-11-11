@@ -30,6 +30,23 @@ struct CppMFDSPEC : public MFDSPEC
 	}
 };
 
+/// Image stream structure to be passed to image followers
+struct imageStream
+{
+	/// Constructor
+	imageStream() : Memory(0), stream(0), size(0) {}
+
+	/// Memory handle for the stream
+	HGLOBAL		Memory;
+
+	/// Stream on which encoded images are buffered
+	IStream *	stream;
+
+	/// Size of the current image
+	int			size;
+};
+
+
 /// Handles a MFD life cycle displayed by the web server
 /// To be used by the WebMFD Server
 class ServerMFD : public ExternMFD
@@ -62,43 +79,43 @@ public:
 	virtual void clbkRefreshButtons();
 
 	/// Informs the ServerMFD that there is one more follower that will be looking at its PNG image
-	void			addPng() { ++_png; }
+	void			addPng() { ++_pngFollowers; }
 
 	/// Informs the ServerMFD that there is one less follower that will be looking at its PNG image
-	void			remPng() { if (_png > 0) --_png; }
+	void			remPng() { if (_pngFollowers > 0) --_pngFollowers; }
 
 	/// Informs the ServerMFD that there is one more follower that will be looking at its JPEG image
-	void			addJpeg() { ++_jpeg; }
+	void			addJpeg() { ++_jpegFollowers; }
 
 	/// Informs the ServerMFD that there is one less follower that will be looking at its JPEG image
-	void			remJpeg() { if (_jpeg > 0) --_jpeg; }
+	void			remJpeg() { if (_jpegFollowers > 0) --_jpegFollowers; }
 
 	/// Informs the ServerMFD that there is one more follower that won't be looking at any of it's image (will only use buttons)
-	void			addNox() { ++_nox; }
+	void			addNox() { ++_noxFollowers; }
 
 	/// Informs the ServerMFD that there is one less follower that won't be looking at any of it's image
-	void			remNox() { if (_nox > 0) --_nox; }
+	void			remNox() { if (_noxFollowers > 0) --_noxFollowers; }
 
 	/// Gets the total number of all folowers
 	/// \return the number of folowers
-	unsigned int	Followers() { return _png + _jpeg + _nox; }
+	unsigned int	Followers() { return _pngFollowers + _jpegFollowers + _noxFollowers; }
 
-	/// Returns a file handle to the desired image if and only if the prevId is not the current image id.
-	/// The current id can never be 0, so a 0 prevId means that it should always return the file.
-	/// This will return INVALID_HANDLE_VALUE if:
+	/// Returns a IStream* containing the desired image if and only if the prevId is not the current image id.
+	/// The current id can never be 0, so a 0 prevId means that it should always return the stream, except when the MFD has been created but not yet refreshed.
+	/// This will return 0 if:
 	///   - The image is requested in a format that does not have any followers.
 	///   - prevId is the same as the current image id.
 	/// When the image is correctly returned:
 	///   - prevId is updated to the current image id.
-	///   - The ownership of the file is granted, which means that the file cannot be read or updated by any other thread until closeFile is called.
-	/// \param[in]		format	The format of the image file requested: "png" or "jpeg".
+	///   - The ownership of the stream is granted, which means that the stream cannot be read or updated by any other thread until closeStream is called.
+	/// \param[in]		format	The format of the image requested: "png" or "jpeg".
 	/// \param[in,out]	prevId	The id of the previous image. Updated if there is a new image.
-	/// \return the requested file handle or INVALID_HANDLE_VALUE
-	HANDLE			getFileIf(const std::string &format, unsigned int &prevId);
+	/// \return the Istream or 0
+	imageStream *	getStreamIf(const std::string &format, unsigned int &prevId);
 
-	/// Closes a file opened with getFileIf
-	/// \param[in]	file	Handle returned by getFileIf
-	void			closeFile(HANDLE file);
+	/// Closes a stream opened with getStreamIf
+	/// Releases it ownership
+	void			closeStream();
 
 	/// Starts a Button press process.
 	/// Waits for any other button process to finish and then start a button process.
@@ -136,11 +153,11 @@ protected:
 
 private:
 	/// Called to copy the content of MFD surface to bitmap
-	/// This must be called before releasing file mutex and before calling _generateImage()
+	/// This must be called before releasing stream mutex and before calling _generateImage()
 	void ServerMFD::_copySurfaceToBitmap();
 
 	/// Called to regenerate the JPEG and PNG images
-	/// This must be called while having the ownership of _fileMutex
+	/// This must be called while having the ownership of _streamMutex
 	void			_generateImage();
 
 	/// Generates the JSON string and stores it in _JSON.
@@ -150,29 +167,32 @@ private:
 	/// The MFD specifications.
 	CppMFDSPEC		_spec;
 
-	/// The temporary file path, without extension, on which to write the images.
-	std::string		_tempFileName;
+	/// The mutex to access the streams.
+	HANDLE			_streamMutex;
 
-	/// The mutex to access the files.
-	HANDLE			_fileMutex;
+	/// The stream structure for the PNG followers
+	imageStream		_streamPNG;
+
+	/// The stream structure for the JPEG followers
+	imageStream		_streamJPEG;
 
 	/// The id of the current image. Is incremented at each MFD refresh. Cannot be 0.
 	unsigned int	_surfaceId;
 
-	/// The file SURFHANDLE used in threads
+	/// The SURFHANDLE used in threads (not managed by the Orbiter core)
 	SURFHANDLE		_surface;
 
 	/// Wether the image needs to be regenerated.
 	bool			_surfaceHasChanged;
 
 	/// The number of PNG folowers.
-	unsigned int	_png;
+	unsigned int	_pngFollowers;
 
 	/// The number of JPEG folowers.
-	unsigned int	_jpeg;
+	unsigned int	_jpegFollowers;
 
 	/// The number of folowers with no image interest.
-	unsigned int	_nox;
+	unsigned int	_noxFollowers;
 
 	/// The mutex to handle the button processes.
 	HANDLE			_btnMutex;

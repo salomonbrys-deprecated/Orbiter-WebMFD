@@ -280,12 +280,12 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 			// Infinite loop that will run until the connection stops
 			for (;;)
 			{
-				// Get a handle on the image file if, and only if, the id of the image has changed
+				// Get a stream containing the image if, and only if, the id of the image has changed
 				// Will also update the id to the id of the new image
-				HANDLE file = mfd->getFileIf(format, id);
+				imageStream * stream = mfd->getStreamIf(format, id);
 				
 				// If there is a new image
-				if (file != INVALID_HANDLE_VALUE)
+				if (stream)
 				{
 					// If the close button has been pressed, break the stream
 					if (mfd->getClose())
@@ -298,46 +298,58 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 
 					// Send the content-length header and the empty line indicating the end of the headers in the motion image stream
 					char length[15];
-					_itoa_s(GetFileSize(file, NULL), length, 15, 10);
+					_itoa_s(stream->size, length, 15, 10);
 					ssend(connection, "Content-Length: ");
 					ssend(connection, length);
 					ssend(connection, "\r\n\r\n");
 
-					// The buffer used to read the image file
+					// The buffer used to read the image
 					char buffer[256];
 					
 					// The number of bytes read at each iteration of the read loop
 					// Set to one to enable to start the loop
-					DWORD read;
+					ULONG read;
 					
-					// Wether to continue to read at each iteration of the read loop
-					// Wether ReadFile succeeds
-					// Set to TRUE to enable to start the loop
-					BOOL cont;
+					// The Read call return status
+					// Wether Read succeeds
+					HRESULT readHr;
 					
 					// Number of byte read at each iteration of the read loop
 					int sent;
 					
-					// Transfer from file to socket...
+					// The total number of bytes sent
+					int totalSent = 0;
+
+					// Transfer from stream to socket...
 					do
 					{
-						// Read the 256 bytes of the image file
-						cont = ReadFile(file, buffer, 256, &read, NULL);
+						// The number of bytes to read left in the image
+						int bytesToRead = stream->size - totalSent;
+
+						// Read by range of maximum 256 bytes
+						if (bytesToRead > 256)
+							bytesToRead = 256;
+
+						// Read the bytes of the stream
+						readHr = stream->stream->Read(buffer, bytesToRead, &read);
 						
 						// If the read has succeeded
-						if (cont && read)
-							// Write on the socket what has been read from the file
+						if (readHr == S_OK && read)
+						{
+							// Write on the socket what has been read from the stream
 							sent = send(connection, buffer, read, 0);
+							totalSent += sent;
+						}
 					}
-					// ...While the read has succeded
-					while (cont && read && sent != SOCKET_ERROR);
+					// ...While the read has succeded and more bytes are to be read
+					while (readHr == S_OK && totalSent < stream->size && read && sent != SOCKET_ERROR);
 
 					// If the last socket send has failed, then it means that the socket has been close, break the stream
 					if (sent == SOCKET_ERROR)
 						break ;
 					
-					// Close the image file
-					mfd->closeFile(file);
+					// Release the image stream
+					mfd->closeStream();
 				}
 				
 				// Wait for a tenth of the refreshing interval before asking if there is a new image
