@@ -99,6 +99,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -148,6 +149,19 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="HTML\Default_1_WebSockets\description.txt" />
+    <None Include="HTML\Default_1_WebSockets\index.html" />
+    <None Include="HTML\Default_1_WebSockets\prototype.js" />
+    <None Include="HTML\Default_1_WebSockets\script.js" />
+    <None Include="HTML\Default_1_WebSockets\style.css" />
+    <None Include="HTML\Default_2_Ajax\description.txt" />
+    <None Include="HTML\Default_2_Ajax\index.html" />
+    <None Include="HTML\Default_2_Ajax\prototype.js" />
+    <None Include="HTML\Default_2_Ajax\script.js" />
+    <None Include="HTML\Default_2_Ajax\style.css" />
+    <None Include="HTML\_InterfaceChoice.css" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
