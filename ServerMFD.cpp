@@ -197,6 +197,11 @@ void	ServerMFD::startBtnProcess()
 	WaitForSingleObject(_btnProcessSmp, INFINITE);
 }
 
+void	ServerMFD::endBtnProcess()
+{
+	// Release the button process mutex, meaning the end of the button process
+	ReleaseSemaphore(_btnProcessSmp, 1, NULL);
+}
 
 void	ServerMFD::execBtnProcess(int btnId)
 {
@@ -235,9 +240,6 @@ void	ServerMFD::execBtnProcess(int btnId)
 		ProcessButton(btnId, PANEL_MOUSE_LBDOWN);
 		ProcessButton(btnId, PANEL_MOUSE_LBUP);
 	}
-
-	// Release the button process mutex, meaning the end of the button process
-	ReleaseSemaphore(_btnProcessSmp, 1, NULL);
 }
 
 

@@ -135,6 +135,9 @@ private:
 	/// The button to inform pression in Orbiter in the main thread
 	BtnQueue			_btnPress;
 
+	/// The MFDs to end a button press process
+	MFDQueue			_btnEnd;
+
 	/// The mutex to access MFD Map and different event queues
 	HANDLE				_mfdsMutex;
 };

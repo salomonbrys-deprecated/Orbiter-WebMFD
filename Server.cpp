@@ -190,9 +190,18 @@ void Server::clbkOrbiterPreStep()
 	for (; !_toUnregister.empty(); _toUnregister.pop())
 		_toUnregister.front()->unRegister();
 
+	// Call the Orbiter MFD endBtnProcess for each registered MFD.
+	for (; !_btnEnd.empty(); _btnEnd.pop())
+		_btnEnd.front()->endBtnProcess();
+
 	// Call the Orbiter MFD execBtnProcess for each button pressed event registered MFD.
 	for (; !_btnPress.empty(); _btnPress.pop())
+	{
 		_btnPress.front().first->execBtnProcess(_btnPress.front().second);
+		
+		// Register the end of the button press process *after* that orbiter has processed it.
+		_btnEnd.push(_btnPress.front().first);
+	}
 
 	// Release the _mfds access mutex
 	ReleaseMutex(_mfdsMutex);
@@ -272,6 +281,15 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 		// The request is correct
 		else
 		{
+			// Wether to force refresh (mainly used by clients that use btn_h requests)
+			bool forceRefresh = false;
+			if (request.get.find("force") != request.get.end())
+				forceRefresh = true;
+
+			// The number of time we have waited for a tenth of the refreshing time.
+			// Used if forceRefresh is true
+			int nbWaits = 0;
+
 			// Remove the 'm' of "mjpeg" or "mpng"
 			format = format.substr(1);
 
@@ -361,10 +379,32 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 					
 					// Release the image stream
 					mfd->closeStream();
+
+					// reset the number of waits
+					nbWaits = 0;
 				}
 				
 				// Wait for a tenth of the refreshing interval before asking if there is a new image
 				Sleep((DWORD)(WEBMFD_REFRESH_ASK_MS));
+
+				// If the display is forced to be refreshed every refreshing time (even if the image has not changed)
+				if (forceRefresh)
+				{
+					// Increment the number of times we have waited since the last image
+					++nbWaits;
+
+					// If we have waited more then a refreshing time
+					if (nbWaits > 10)
+					{
+						// Force the MFD refresh
+						WaitForSingleObject(_mfdsMutex, INFINITE);
+						_forceRefresh.push(mfd);
+						ReleaseMutex(_mfdsMutex);
+
+						// reset the number of waits
+						nbWaits = 0;
+					}
+				}
 			}
 			
 			// Close the MFD

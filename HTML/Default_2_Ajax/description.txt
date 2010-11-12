@@ -1,0 +1,5 @@
+The Default MFD Web Interface using AJAX for the buttons. This gives a more reliable buttons behaviour but significantly increases the MFD reponse time.<br />
+This feature is <b>stable</b> in all web browsers but <b>very slow</b>.<br />
+This interface is currently known to be working on Google Chrome and Apple Safari (including <i>beta</i> IPad version) for a better quality display (based on PNG).<br />
+It also works on Mozilla Firefox for a lesser quality display (based on JPEG).<br />
+Because WebMFD relies on motion pictures, it cannot work on Internet Explorer nor Opera (as they do not implement this standard).
