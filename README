@@ -1,14 +1,16 @@
 ORBITER WEB MFD by Salomon BRYS
 
-Provides an embeded web server that permits to handle
-MFDs on any MODERN browser.
+Provides an embeded web server that permits to handle MFDs on any MODERN browser.
 The browser must be able to handle:
- * WebSockets
+ * WebSockets (if using the WebSockets interface)
  * Motion-PNG or Motion-JPEG
 
 Known working browsers :
  - Webkit based browsers like Google Chrome and Apple Safari (Uses PNG, better display - Recommanded)
  - Gecko based browsers like Mozilla Firefox (Uses JPEG Worse display)
+The beta version of those browsers are required to use the WebSocket interface.
+
+It also permits any application to display MFDs over network using a very simple protocol.
 
 Any questions or contribution, feel free to e-mail me :
 salomon <dot> brys <at> gmail <you-know-the-rest-;)>
