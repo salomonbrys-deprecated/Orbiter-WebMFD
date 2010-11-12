@@ -1,0 +1,3 @@
+The Default MFD Web Interface using the WebSockets for the buttons making them very reactive.<br />
+This feature is <b>experimental</b> in all web browsers. If the buttons are disabled and dotted, after 15 seconds, power off the MFD and restart one.<br />
+This interface is currently known to be working on Google Chrome, Apple Safari BETA (including IPad version) and Mozilla Firefox BETA.

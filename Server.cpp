@@ -91,7 +91,7 @@ bool Server::stop()
 }
 
 
-ServerMFD * Server::openMFD(const std::string &key, const std::string &format /* = "" */)
+ServerMFD * Server::openMFD(const std::string &key, const std::string &format /* = "" */, bool create /* = true */)
 {
 	// Wait to be able to access _mfds by waiting to gain acces to its mutex
 	WaitForSingleObject(_mfdsMutex, INFINITE);
@@ -99,6 +99,10 @@ ServerMFD * Server::openMFD(const std::string &key, const std::string &format /*
 	// If the mutex does not exists
 	if (_mfds.find(key) == _mfds.end())
 	{
+		// Return null pointer if not asked to create a MFD
+		if (!create)
+			return 0;
+
 		// Create a new MFD
 		_mfds[key] = new ServerMFD;
 
@@ -225,7 +229,7 @@ void Server::handleRequest(SOCKET connection, Request & request)
 	}
 	
 	// If the request is for a button classic HTTP enquiry
-	else if (request.resource.substr(0, 5) == "/btn_h/")
+	else if (request.resource.substr(0, 7) == "/btn_h/")
 	{
 		// Remove the "/btn_h/" from the resource string
 		request.resource = request.resource.substr(7);
@@ -270,6 +274,10 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 
 			// Get the MFD for the corresponding key
 			ServerMFD *mfd = openMFD(request.get["key"], format);
+
+			// Check that the MFD has correctly been opened
+			if (!mfd)
+				return ;
 			
 			// Send a 200 HTTP code followed by the Content-Type header needed for the motion image stream
 			ssend(connection, "HTTP/1.0 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=--MFDNextImage--\r\n");
@@ -409,21 +417,55 @@ void Server::handleWebRequest(SOCKET connection, Request & request)
 		else
 		{
 			// Send a 200 HTTP code along with the HTML header of the list
-			ssend(connection, "HTTP/1.0 200 OK\r\n\r\n<html><head><title>Interface list</title></head><body>");
+			ssend(connection,
+				"HTTP/1.0 200 OK\r\n"
+				"\r\n"
+				"<html>"
+					"<head>"
+						"<title>Interface list</title>"
+						"<link rel='Stylesheet' type='text/css' href='_InterfaceChoice.css' />"
+					"</head>"
+					"<body>"
+						"<h1>Choose an Interface</h1>"
+			);
 			
 			// For each sub-directory name in the list
 			for (stringList::iterator i = dirs.begin(); i != dirs.end(); ++i)
 			{
 				// Send a HTML hyperlink for it
-				ssend(connection, "<p><a href='");
+				ssend(connection, "<div class='interface'><h3><a href='");
 				ssend(connection, i->c_str());
 				ssend(connection, "/'>");
 				ssend(connection, i->c_str());
-				ssend(connection, "</a></p>");
+				ssend(connection, "</a></h3>");
+
+				// If there is a description
+				HANDLE descFile = CreateFile((std::string("WebMFD\\") + *i + "\\description.txt").c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+				if (descFile != INVALID_HANDLE_VALUE)
+				{
+					// Send the description (using a 256 bytes buffer)
+					ssend(connection, " <p class='desc'>");
+					char buffer[256];
+					DWORD read;
+					for (;;)
+					{
+						if (!ReadFile(descFile, buffer, 256, &read, NULL))
+							break ;
+						if (!read)
+							break ;
+						send(connection, buffer, read, 0);
+					}
+					ssend(connection, "</p>");
+				}
+				ssend(connection, "</div>");
 			}
 			
 			// Send the HTML footer of the list
-			ssend(connection, "</body></html>");
+			ssend(connection,
+						"<p class='footer'>Tip: if you are always using the same interface, delete all the others in the WebMFD directory to automatically use the remain one</p>"
+					"</body>"
+				"</html>"
+			);
 		}
 	}
 	// The request does specifies a resource: the resource is a file
@@ -672,7 +714,7 @@ void Server::handleBtnHRequest(SOCKET connection, Request & request)
 	}
 
 	// Open the MFD (with no image format)
-	ServerMFD *mfd = openMFD(request.get["key"]);
+	ServerMFD *mfd = openMFD(request.get["key"], "", false);
 
 	// If the open of the MFD failed, send a 500 error and return
 	if (!mfd)
@@ -680,6 +722,9 @@ void Server::handleBtnHRequest(SOCKET connection, Request & request)
 		ssend(connection, "HTTP/1.0 412 Precondition Failed\r\n\r\n<h1>Could not find the MFD</h1>");
 		return ;
 	}
+
+	// Send a 200 HTTP error code
+	ssend(connection, "HTTP/1.0 200 OK\r\n\r\n");
 
 	// Get the button id from the resource
 	int btnId = atoi(request.resource.c_str());
@@ -701,10 +746,10 @@ void Server::handleBtnHRequest(SOCKET connection, Request & request)
 		// Wait for the end of the button process
 		mfd->waitForBtnProcess();
 		
-		// If the button press was not the close button,
-		// force the refresh of the MFD as the button press has probably a consequence on the display
-		if (btnId != 99)
-			_forceRefresh.push(mfd);
+		// Force the refresh of the MFD as the button press has probably a consequence on the display
+		WaitForSingleObject(_mfdsMutex, INFINITE);
+		_forceRefresh.push(mfd);
+		ReleaseMutex(_mfdsMutex);
 	}
 
 	// send the buttons status in JSON

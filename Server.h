@@ -55,8 +55,9 @@ public:
 	/// The closeMFD MUST be called when the usage of the returned MFD is finished.
 	/// \param[in]	key		A key on which to register the MFD
 	/// \param[in]	format	"mpng" or "mjpeg" or "". If no null, used to inform the MFD refresh thread that there will be at least one thread that will need image from this format.
+	/// \param[in]	create	Wether to create a MFD if it does not exists for the required key
 	/// \return An existing or newly created ServerMFD pointer
-	ServerMFD		*openMFD(const std::string &key, const std::string &format = "");
+	ServerMFD		*openMFD(const std::string &key, const std::string &format = "", bool create = true);
 	
 	/// Closes a MFDMap
 	/// Must be called with the exact same parameter as given to OpenMFD.
