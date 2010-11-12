@@ -123,6 +123,10 @@ public:
 	/// Can be called from any thread.
 	void			startBtnProcess();
 
+	/// Ends a Button press process, relasing any lock on waitForBtnProcess and allowing next button press processes.
+	/// Should only be called by the same thread that called execBtnProcess, after a orbiter core processing.
+	void			endBtnProcess();
+
 	/// Waits until the current button process ends.
 	/// Can be called from any thread.
 	void			waitForBtnProcess();

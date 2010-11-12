@@ -94,6 +94,28 @@ END
 /////////////////////////////////////////////////////////////////////////////
 
 
+/////////////////////////////////////////////////////////////////////////////
+// English (United Kingdom) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENG)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_UK
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_INFO                "Web MFDs:\r\n\r\nProvides support for displaying MFD (multi-functional display) instruments in separate computers and devices.\r\n\r\nWebMFD provides a small web server that can be access through a modern browser.\r\nThrough this browser, WebMFD allows you to open as many MFDs as you like.\r\n\r\nWebMFD also provides a simple protocol that enables any application on any device to display a MFD."
+    IDS_TYPE                "Tools and dialogs"
+END
+
+#endif    // English (United Kingdom) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
 
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
