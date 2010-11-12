@@ -316,6 +316,7 @@ void ServerMFD::_copySurfaceToBitmap()
 
 	// Release the Surface Device Context
 	oapiReleaseDC(_surface, hDCsrc);
+	DeleteDC(cdc);
 
 	// No need to regenrate until the surface changes
 	_surfaceHasChanged = false;
@@ -386,6 +387,8 @@ void ServerMFD::_generateImage()
 		_streamJPEG.stream->Seek(moveBy, STREAM_SEEK_CUR, &nPos);
 		_streamJPEG.size = nPos.QuadPart;
 	}
+
+	delete img;
 
 	// Incrementing the image id, modulo the maximum possible value for a int
 	_surfaceId = ((_surfaceId + 1) % (UINT_MAX - 1)) + 1;
