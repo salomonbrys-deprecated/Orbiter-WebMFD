@@ -101,7 +101,10 @@ ServerMFD * Server::openMFD(const std::string &key, const std::string &format /*
 	{
 		// Return null pointer if not asked to create a MFD
 		if (!create)
+		{
+			ReleaseMutex(_mfdsMutex);
 			return 0;
+		}
 
 		// Create a new MFD
 		_mfds[key] = new ServerMFD;
