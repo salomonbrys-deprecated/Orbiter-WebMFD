@@ -27,7 +27,7 @@ function addMFD(div)
 	+	"	<button onclick=\"processButton('"+key+"', 4)\">.</button>"
 	+	"	<button onclick=\"processButton('"+key+"', 5)\">.</button>"
 	+	"</div>"
-	+	"<img src='/mfd/mfd."+format+"?key="+key+"&force=1' alt='MFD' />"
+	+	"<img src='/mfd/mfd."+format+"?key="+key+"' alt='MFD' />"
 	+	"<div class='RBtn'>"
 	+	"	<button onclick=\"processButton('"+key+"', 6)\">.</button>"
 	+	"	<button onclick=\"processButton('"+key+"', 7)\">.</button>"

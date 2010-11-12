@@ -281,13 +281,7 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 		// The request is correct
 		else
 		{
-			// Wether to force refresh (mainly used by clients that use btn_h requests)
-			bool forceRefresh = false;
-			if (request.get.find("force") != request.get.end())
-				forceRefresh = true;
-
 			// The number of time we have waited for a tenth of the refreshing time.
-			// Used if forceRefresh is true
 			int nbWaits = 0;
 
 			// Remove the 'm' of "mjpeg" or "mpng"
@@ -383,12 +377,7 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 					// reset the number of waits
 					nbWaits = 0;
 				}
-				
-				// Wait for a tenth of the refreshing interval before asking if there is a new image
-				Sleep((DWORD)(WEBMFD_REFRESH_ASK_MS));
-
-				// If the display is forced to be refreshed every refreshing time (even if the image has not changed)
-				if (forceRefresh)
+				else
 				{
 					// Increment the number of times we have waited since the last image
 					++nbWaits;
@@ -405,6 +394,8 @@ void Server::handleMFDRequest(SOCKET connection, Request & request)
 						nbWaits = 0;
 					}
 				}
+				// Wait for a tenth of the refreshing interval before asking if there is a new image
+				Sleep((DWORD)(WEBMFD_REFRESH_ASK_MS));
 			}
 			
 			// Close the MFD
